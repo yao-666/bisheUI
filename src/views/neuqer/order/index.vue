@@ -255,9 +255,8 @@
             <el-col :span="3">
               <div class="expandDiv3">实付金额：{{props.row.orderAmount}}</div>
             </el-col>
-            <el-col :span="4" :offset="6">
-              <el-button size="small" type="text" icon="el-icon-edit-outline" @click="handlePickUpAll(scope.row)">全部领取
-              </el-button>
+            <el-col :span="4" :offset="8">
+
             </el-col>
           </el-row>
           <el-table :data="props.row.itemVos" :default-expand-all="true" border :show-header="false"
@@ -317,17 +316,13 @@
             <el-table-column label="操作">
               <template slot-scope="scope">
                 <div class="tableLast">
-                  <el-button
-                    size="small"
-                    type="text"
-                    icon="el-icon-edit-outline"
-                    @click="handlePickUp(scope.row)">领取
+                  <el-button size="small" type="text" icon="el-icon-edit-outline" @click="dialogPickUp(props.row,scope.row)">领取
                   </el-button>
                   <el-button
                     size="small"
                     type="text"
                     icon="el-icon-position"
-                    @click="handleReturn(scope.row)">物品还回
+                    @click="handleReturn(props.row)">物品归还
                   </el-button>
                   <el-button
                     size="small"
@@ -472,7 +467,6 @@
         <el-tooltip class="item" effect="dark" content="请校验上传文件没有错误后再导入数据！" placement="top" :disabled="upload.isImport">
           <el-button type="primary" @click="submitFileForm" :disabled="!upload.isImport">导 入</el-button>
         </el-tooltip>
-
         <el-button @click="upload.open = false">取 消</el-button>
       </div>
     </el-dialog>
@@ -487,12 +481,75 @@
       </el-table>
     </el-dialog>
 
+<!--    领取对话框-->
+    <el-dialog :title="take.title" :visible.sync="take.takeDialog" width="800px">
+      <el-descriptions class="margin-top" title="订单信息" :column="3" border>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            订单编号：
+          </template>
+          {{takeList.orderSn}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-user"></i>
+            姓名：
+          </template>
+          {{takeList.receiverName}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-mobile-phone"></i>
+            手机号
+          </template>
+          {{takeList.receiverPhone}}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-descriptions class="margin-top" :column="1" border>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            产品名称：
+          </template>
+          {{orderItem.productName}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            产品规格：
+          </template>
+          {{orderItem.shoppingOptions}}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-descriptions class="margin-top" :column="2" border>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            产品分类：
+          </template>
+          {{orderItem.className}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-edit"></i>
+            领取数量：
+          </template>
+          <el-input-number v-model="take.takeNumber" :min="0" :max="take.maxNumber"></el-input-number>
+        </el-descriptions-item>
+      </el-descriptions>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="handleTake">确 定</el-button>
+        <el-button @click="take.takeDialog = false">取 消</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
   import { listOrder, getOrder, delOrder, addOrder, updateOrder, uploadOrder } from '@/api/neuqer/order'
   import { getToken } from '@/utils/auth'
+  import {addTakeRecord} from '@/api/neuqer/takeRecord'
 
   export default {
     name: 'Order',
@@ -563,6 +620,17 @@
           dialogTableVisible: false
         },
 
+        //单个订单数据
+        takeList:{},
+        //单个订单明细
+        orderItem:{},
+        take:{
+          takeDialog: false,
+          tableTitle:'',
+          title:'',
+          takeNumber: 0,
+          maxNumber: 0,
+        },
         // 查询参数
         queryParams: {
           pageNum: 1,
@@ -935,6 +1003,33 @@
         const cellWidth = obj.target.offsetWidth
         /*当文本宽度小于||等于容器宽度两倍时，代表文本显示未超过两行*/
         currentWidth <= (2 * cellWidth) ? row.showTooltip = false : row.showTooltip = true
+      },
+      dialogPickUp(propsRow,scopeRow){
+        if(scopeRow.takeNumber > 0){
+          this.takeList = propsRow;
+          this.orderItem = scopeRow;
+          this.take.title = "物品领取确认信息"
+          this.take.tableTitle = "领取数量"
+          this.take.maxNumber = this.orderItem.takeNumber - 0;
+          this.take.takeNumber = this.orderItem.singleNumber - 0;
+          this.take.takeDialog = true;
+        }else{
+          this.$alert('<div style=\'overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;\'>' + '<br>错误信息</br>' + '</div>', '该产品数量已领取完毕', { dangerouslyUseHTMLString: true })
+        }
+      },
+      handleTake(){
+        let takeRecord = {
+          itemId: this.orderItem.id,
+          orderSn: this.orderItem.orderSn,
+          productName: this.orderItem.productName,
+          className: this.orderItem.className,
+          shoppingOptions: this.orderItem.shoppingOptions,
+          takeNumber: this.take.takeNumber
+        }
+        addTakeRecord(takeRecord).then(res =>{
+          this.take.takeDialog = false;
+          this.getList();
+        });
       }
     }
   }

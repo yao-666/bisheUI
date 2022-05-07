@@ -19,18 +19,18 @@
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="购物选项" prop="shoppingOptions">
+      <el-form-item label="产品分类" prop="className">
         <el-input
-          v-model="queryParams.shoppingOptions"
-          placeholder="请输入购物选项"
+          v-model="queryParams.className"
+          placeholder="请输入产品分类"
           clearable
           size="small"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="领取数量" prop="returnNumber">
+      <el-form-item label="领取数量" prop="takeNumber">
         <el-input
-          v-model="queryParams.returnNumber"
+          v-model="queryParams.takeNumber"
           placeholder="请输入领取数量"
           clearable
           size="small"
@@ -51,7 +51,7 @@
           icon="el-icon-plus"
           size="mini"
           @click="handleAdd"
-          v-hasPermi="['neuqer:returnRecord:add']"
+          v-hasPermi="['neuqer:takeRecord:add']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -62,7 +62,7 @@
           size="mini"
           :disabled="single"
           @click="handleUpdate"
-          v-hasPermi="['neuqer:returnRecord:edit']"
+          v-hasPermi="['neuqer:takeRecord:edit']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -73,7 +73,7 @@
           size="mini"
           :disabled="multiple"
           @click="handleDelete"
-          v-hasPermi="['neuqer:returnRecord:remove']"
+          v-hasPermi="['neuqer:takeRecord:remove']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -83,19 +83,19 @@
           icon="el-icon-download"
           size="mini"
           @click="handleExport"
-          v-hasPermi="['neuqer:returnRecord:export']"
+          v-hasPermi="['neuqer:takeRecord:export']"
         >导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="returnRecordList" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="takeRecordList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="订单编号" align="center" prop="orderSn" />
       <el-table-column label="产品名称" align="center" prop="productName" />
       <el-table-column label="产品分类" align="center" prop="className" />
       <el-table-column label="购物选项" align="center" prop="shoppingOptions" />
-      <el-table-column label="归还数量" align="center" prop="returnNumber" />
+      <el-table-column label="领取数量" align="center" prop="takeNumber" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
@@ -103,14 +103,14 @@
             type="text"
             icon="el-icon-edit"
             @click="handleUpdate(scope.row)"
-            v-hasPermi="['neuqer:returnRecord:edit']"
+            v-hasPermi="['neuqer:takeRecord:edit']"
           >修改</el-button>
           <el-button
             size="mini"
             type="text"
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
-            v-hasPermi="['neuqer:returnRecord:remove']"
+            v-hasPermi="['neuqer:takeRecord:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
@@ -142,8 +142,8 @@
         <el-form-item label="购物选项" prop="shoppingOptions">
           <el-input v-model="form.shoppingOptions" placeholder="请输入购物选项" />
         </el-form-item>
-        <el-form-item label="领取数量" prop="returnNumber">
-          <el-input v-model="form.returnNumber" placeholder="请输入领取数量" />
+        <el-form-item label="领取数量" prop="takeNumber">
+          <el-input v-model="form.takeNumber" placeholder="请输入领取数量" />
         </el-form-item>
         <el-form-item label="领取人id" prop="receiverId">
           <el-input v-model="form.receiverId" placeholder="请输入领取人id" />
@@ -158,10 +158,10 @@
 </template>
 
 <script>
-import { listReturnRecord, getReturnRecord, delReturnRecord, addReturnRecord, updateReturnRecord } from "@/api/neuqer/returnRecord";
+import { listTakeRecord, getTakeRecord, delTakeRecord, addTakeRecord, updateTakeRecord } from "@/api/neuqer/takeRecord";
 
 export default {
-  name: "ReturnRecord",
+  name: "TakeRecord",
   data() {
     return {
       // 按钮loading
@@ -179,7 +179,7 @@ export default {
       // 总条数
       total: 0,
       // 领取记录表格数据
-      returnRecordList: [],
+      takeRecordList: [],
       // 弹出层标题
       title: "",
       // 是否显示弹出层
@@ -193,7 +193,7 @@ export default {
         productName: undefined,
         className: undefined,
         shoppingOptions: undefined,
-        returnNumber: undefined,
+        takeNumber: undefined,
         receiverId: undefined,
       },
       // 表单参数
@@ -218,7 +218,7 @@ export default {
         shoppingOptions: [
           { required: true, message: "购物选项不能为空", trigger: "blur" }
         ],
-        returnNumber: [
+        takeNumber: [
           { required: true, message: "领取数量不能为空", trigger: "blur" }
         ],
         receiverId: [
@@ -234,8 +234,8 @@ export default {
     /** 查询领取记录列表 */
     getList() {
       this.loading = true;
-      listReturnRecord(this.queryParams).then(response => {
-        this.returnRecordList = response.rows;
+      listTakeRecord(this.queryParams).then(response => {
+        this.takeRecordList = response.rows;
         this.total = response.total;
         this.loading = false;
       });
@@ -254,7 +254,7 @@ export default {
         productName: undefined,
         className: undefined,
         shoppingOptions: undefined,
-        returnNumber: undefined,
+        takeNumber: undefined,
         receiverId: undefined,
         delFlag: undefined,
         createBy: undefined,
@@ -291,7 +291,7 @@ export default {
       this.loading = true;
       this.reset();
       const id = row.id || this.ids
-      getReturnRecord(id).then(response => {
+      getTakeRecord(id).then(response => {
         this.loading = false;
         this.form = response.data;
         this.open = true;
@@ -304,7 +304,7 @@ export default {
         if (valid) {
           this.buttonLoading = true;
           if (this.form.id != null) {
-            updateReturnRecord(this.form).then(response => {
+            updateTakeRecord(this.form).then(response => {
               this.$modal.msgSuccess("修改成功");
               this.open = false;
               this.getList();
@@ -312,7 +312,7 @@ export default {
               this.buttonLoading = false;
             });
           } else {
-            addReturnRecord(this.form).then(response => {
+            addTakeRecord(this.form).then(response => {
               this.$modal.msgSuccess("新增成功");
               this.open = false;
               this.getList();
@@ -328,7 +328,7 @@ export default {
       const ids = row.id || this.ids;
       this.$modal.confirm('是否确认删除领取记录编号为"' + ids + '"的数据项？').then(() => {
         this.loading = true;
-        return delReturnRecord(ids);
+        return delTakeRecord(ids);
       }).then(() => {
         this.loading = false;
         this.getList();
@@ -339,9 +339,9 @@ export default {
     },
     /** 导出按钮操作 */
     handleExport() {
-      this.download('neuqer/returnRecord/export', {
+      this.download('neuqer/takeRecord/export', {
         ...this.queryParams
-      }, `returnRecord_${new Date().getTime()}.xlsx`)
+      }, `takeRecord_${new Date().getTime()}.xlsx`)
     }
   }
 };

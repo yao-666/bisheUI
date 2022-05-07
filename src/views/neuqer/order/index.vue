@@ -316,13 +316,14 @@
             <el-table-column label="操作">
               <template slot-scope="scope">
                 <div class="tableLast">
-                  <el-button size="small" type="text" icon="el-icon-edit-outline" @click="dialogPickUp(props.row,scope.row)">领取
+                  <el-button size="small" type="text" icon="el-icon-edit-outline"
+                             @click="dialogPickUp(props.row,scope.row)">领取
                   </el-button>
                   <el-button
                     size="small"
                     type="text"
                     icon="el-icon-position"
-                    @click="handleReturn(props.row)">物品归还
+                    @click="dialogReturn(props.row,scope.row)">物品归还
                   </el-button>
                   <el-button
                     size="small"
@@ -481,29 +482,29 @@
       </el-table>
     </el-dialog>
 
-<!--    领取对话框-->
-    <el-dialog :title="take.title" :visible.sync="take.takeDialog" width="800px">
+    <!--    领取对话框-->
+    <el-dialog title="领取详细信息" :visible.sync="take.takeDialog" width="800px">
       <el-descriptions class="margin-top" title="订单信息" :column="3" border>
         <el-descriptions-item>
           <template slot="label">
             <i class="el-icon-tickets"></i>
             订单编号：
           </template>
-          {{takeList.orderSn}}
+          {{orderList.orderSn}}
         </el-descriptions-item>
         <el-descriptions-item>
           <template slot="label">
             <i class="el-icon-user"></i>
             姓名：
           </template>
-          {{takeList.receiverName}}
+          {{orderList.receiverName}}
         </el-descriptions-item>
         <el-descriptions-item>
           <template slot="label">
             <i class="el-icon-mobile-phone"></i>
             手机号
           </template>
-          {{takeList.receiverPhone}}
+          {{orderList.receiverPhone}}
         </el-descriptions-item>
       </el-descriptions>
       <el-descriptions class="margin-top" :column="1" border>
@@ -543,13 +544,77 @@
         <el-button @click="take.takeDialog = false">取 消</el-button>
       </div>
     </el-dialog>
+
+    <!--    归还物品对话框-->
+    <el-dialog title="归还物品详细信息" :visible.sync="returnGoods.returnDialog" width="800px">
+      <el-descriptions class="margin-top" title="订单信息" :column="3" border>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            订单编号：
+          </template>
+          {{orderList.orderSn}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-user"></i>
+            姓名：
+          </template>
+          {{orderList.receiverName}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-mobile-phone"></i>
+            手机号
+          </template>
+          {{orderList.receiverPhone}}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-descriptions class="margin-top" :column="1" border>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            产品名称：
+          </template>
+          {{orderItem.productName}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            产品规格：
+          </template>
+          {{orderItem.shoppingOptions}}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-descriptions class="margin-top" :column="2" border>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-tickets"></i>
+            产品分类：
+          </template>
+          {{orderItem.className}}
+        </el-descriptions-item>
+        <el-descriptions-item>
+          <template slot="label">
+            <i class="el-icon-edit"></i>
+            归还数量：
+          </template>
+          <el-input-number v-model="returnGoods.returnNumber" :min="1"></el-input-number>
+        </el-descriptions-item>
+      </el-descriptions>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="handleReturn">确 定</el-button>
+        <el-button @click="returnGoods.returnDialog = false">取 消</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
   import { listOrder, getOrder, delOrder, addOrder, updateOrder, uploadOrder } from '@/api/neuqer/order'
   import { getToken } from '@/utils/auth'
-  import {addTakeRecord} from '@/api/neuqer/takeRecord'
+  import { addTakeRecord } from '@/api/neuqer/takeRecord'
+  import { addReturnRecord } from '@/api/neuqer/returnRecord'
 
   export default {
     name: 'Order',
@@ -621,15 +686,17 @@
         },
 
         //单个订单数据
-        takeList:{},
+        orderList: {},
         //单个订单明细
-        orderItem:{},
-        take:{
+        orderItem: {},
+        take: {
           takeDialog: false,
-          tableTitle:'',
-          title:'',
           takeNumber: 0,
-          maxNumber: 0,
+          maxNumber: 0
+        },
+        returnGoods: {
+          returnDialog: false,
+          returnNumber: 0
         },
         // 查询参数
         queryParams: {
@@ -644,7 +711,7 @@
           receiverDetailAddress: undefined,
           productName: undefined,
           singleNumber: '',
-          totalQuantity:'',
+          totalQuantity: ''
         },
         // 表单参数
         form: {},
@@ -1004,20 +1071,27 @@
         /*当文本宽度小于||等于容器宽度两倍时，代表文本显示未超过两行*/
         currentWidth <= (2 * cellWidth) ? row.showTooltip = false : row.showTooltip = true
       },
-      dialogPickUp(propsRow,scopeRow){
-        if(scopeRow.takeNumber > 0){
-          this.takeList = propsRow;
-          this.orderItem = scopeRow;
-          this.take.title = "物品领取确认信息"
-          this.take.tableTitle = "领取数量"
-          this.take.maxNumber = this.orderItem.takeNumber - 0;
-          this.take.takeNumber = this.orderItem.singleNumber - 0;
-          this.take.takeDialog = true;
-        }else{
+      //领取按钮
+      dialogPickUp(propsRow, scopeRow) {
+        if (scopeRow.takeNumber > 0) {
+          this.orderList = propsRow
+          this.orderItem = scopeRow
+          this.take.maxNumber = this.orderItem.takeNumber - 0
+          this.take.takeNumber = this.orderItem.singleNumber - 0
+          this.take.takeDialog = true
+        } else {
           this.$alert('<div style=\'overflow: auto;overflow-x: hidden;max-height: 70vh;padding: 10px 20px 0;\'>' + '<br>错误信息</br>' + '</div>', '该产品数量已领取完毕', { dangerouslyUseHTMLString: true })
         }
       },
-      handleTake(){
+      //物品归还按钮
+      dialogReturn(propsRow, scopeRow) {
+        this.orderList = propsRow
+        this.orderItem = scopeRow
+        this.returnGoods.returnNumber = 0
+        this.returnGoods.returnDialog = true
+      },
+      //领取物品提交按钮
+      handleTake() {
         let takeRecord = {
           itemId: this.orderItem.id,
           orderSn: this.orderItem.orderSn,
@@ -1026,10 +1100,37 @@
           shoppingOptions: this.orderItem.shoppingOptions,
           takeNumber: this.take.takeNumber
         }
-        addTakeRecord(takeRecord).then(res =>{
-          this.take.takeDialog = false;
-          this.getList();
-        });
+        //点击领取确定按钮
+        addTakeRecord(takeRecord).then(res => {
+          if (res.msg === '操作成功') {
+            this.$modal.msgSuccess('领取成功，领取数量：' + this.take.takeNumber)
+            this.take.takeDialog = false
+            this.getList()
+          } else {
+            this.$modal.msgWarning('可取数量不足')
+          }
+        })
+      },
+      //归还物品提交按钮
+      handleReturn() {
+        let returnRecord = {
+          itemId: this.orderItem.id,
+          orderSn: this.orderItem.orderSn,
+          productName: this.orderItem.productName,
+          className: this.orderItem.className,
+          shoppingOptions: this.orderItem.shoppingOptions,
+          returnNumber: this.returnGoods.returnNumber
+        }
+        //调用归还物品API
+       addReturnRecord(returnRecord).then(res => {
+          if (res.msg === '操作成功') {
+            this.$modal.msgSuccess('归还成功，归还数量：' + this.returnGoods.returnNumber)
+            this.returnGoods.returnDialog = false
+            this.getList()
+          } else {
+            this.$modal.msgWarning('可取数量不足')
+          }
+        })
       }
     }
   }
